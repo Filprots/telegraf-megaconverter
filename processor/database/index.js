@@ -4,6 +4,6 @@ const speed = require('./speed');
 
 module.exports = {
     time,
-    length
+    length,
     speed
 }
