@@ -1,13 +1,13 @@
 const data = {
-    fs: {
+    femtos: {
         r: 1000000000000000,
         query: [/^femtos(ec(ond(s)?)?)?$/i, 'fsec', 'fs', 'фс', /^фемтос(ек(унд(ы|а|у)?)?)?$/i]
     },
-    ps: {
+    picos: {
         r: 1000000000000,
         query: [/^picos(ec(ond(s)?)?)?$/i, 'psec', 'ps', 'пс', /^пикос(ек(унд(ы|а|у)?)?)?$/i]
     },
-    ns: {
+    nanos: {
         r: 1000000000,
         query: [/^nanos(ec(ond(s)?)?)?$/i, 'nsec', 'ns', 'нс', /^нанос(ек(унд(ы|а|у)?)?)?$/i]
     },
@@ -15,15 +15,15 @@ const data = {
         r: 1000000,
         query: [/^micros(ec(ond(s)?)?)?$/i, 'micsec', 'mcs', 'µs', 'мкс', /^микрос(ек(унд(ы|а|у)?)?)?$/i]
     },
-    ms: {
+    millis: {
         r: 1000,
         query: [/^millis(ec(ond(s)?)?)?$/i, 'ms', 'milsec', 'мс', /^миллис(ек(унд(ы|а|у)?)?)?$/i]
     },
-    s: {
+    sec: {
         r: 1,
         query: [/^s(ec(ond(s)?)?)?$/i, 'secs', 'ss', /^с(ек(унд(ы|а|у)?)?)?$/i, 'сс']
     },
-    min: {
+    minut: {
         r: 1 / 60,
         query: [/^min(ute(s)?)?$/i, 'mins', /^(мин(ут(а|ы|у)?)?)?$/i]
     },
