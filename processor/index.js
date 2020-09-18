@@ -244,7 +244,7 @@ class UnitsProcessor {
                 dataArray[indexes[k]] = v;
             }
         });
-        console.log(dataArray);
+        // console.log(dataArray);
         return JSON.stringify(dataArray)
     }
 

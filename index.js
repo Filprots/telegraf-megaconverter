@@ -6,7 +6,7 @@ const unitsProcessor = require('./processor');
 //////////////////////////////////////////////////////////////////////
 const regexp = /^(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)+(?:\s(?:-|in|to|into|в|сколько)?\s((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)$)?/i;
 //////////////////////////////////////////////////////////////////////
-console.log("LOADIN LOCAL MEGACONVERTER");
+
 module.exports = {
     middleware: Telegraf.compose([
         Telegraf.hears(regexp, input),
@@ -30,7 +30,7 @@ async function input(ctx, next) {
 
 // LISTENER TO CALLBACKS FROM CLARIFYING QUERIES
 async function clarify(ctx, next) {
-    console.log('WE GOT THAT');
+    // console.log('WE GOT THAT');
     let chosen = ctx.update.callback_query.data;
     const result = unitsProcessor.clarify(ctx, chosen);
     await router(ctx, result);
@@ -39,12 +39,54 @@ async function clarify(ctx, next) {
 
 // ROUTER
 async function router(ctx, result) {
-    // result can be a final result or list of variants with callbacks to clarify something
-    if (result.final) {
-        await ctx.replyWithHTML(...result.final);
-    } else if (result.clarify) {
-        await ctx.reply(...result.clarify);
+    const TIMEDELAY = 2000;
+    let chat_id;
+    if (!result && (!result.final || !result.clarify)) return ctx.reply('Internal ERROR');
+    try {
+        chat_id = ctx.update.message ? ctx.update.message.chat.id : ctx.update.callback_query.from.id
+    } catch (e) {
+        console.log(e.message);
     }
+    if (chat_id) {
+        ctx.telegram.sendChatAction(chat_id, 'typing').then(() => {
+            if (result.notice) {
+                setTimeout(() => proceedNotice(ctx, result, chat_id), TIMEDELAY);
+            } else proceedFinal(ctx, result);
+        });
+    } else proceedNotice(ctx, result)
+
+    function proceedNotice(ctx, result, chat_id) {
+        if (chat_id && result.notice) {
+            ctx.replyWithHTML(...result.notice);
+            ctx.telegram.sendChatAction(chat_id, 'typing').then(() => {
+                setTimeout(() => proceedFinal(ctx, result, chat_id), TIMEDELAY);
+            });
+        } else proceedFinal(ctx, result)
+    }
+
+    function proceedFinal(ctx, result, chat_id) {
+        if (chat_id) {
+            ctx.telegram.sendChatAction(chat_id, 'typing').then(() => {
+                setTimeout(() => {
+                    if (result.final) ctx.replyWithHTML(...result.final);
+                    if (result.clarify) ctx.replyWithHTML(...result.clarify);
+                }, TIMEDELAY);
+            });
+        } else {
+            if (result.final) ctx.replyWithHTML(...result.final);
+            if (result.clarify) ctx.replyWithHTML(...result.clarify);
+        }
+    }
+
+    // result can be a final result or list of variants with callbacks to clarify something
+    // if (result.notice) {
+    //     await ctx.replyWithHTML(...result.notice);
+    // }
+    // if (result.final) {
+    //     await ctx.replyWithHTML(...result.final);
+    // } else if (result.clarify) {
+    //     await ctx.reply(...result.clarify);
+    // }
 }
 
 function callbackQueryTest(ctx) {
