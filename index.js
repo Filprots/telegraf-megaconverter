@@ -4,7 +4,7 @@ const _ = require.main.require('underscore');
 const unitsProcessor = require('./processor');
 
 //////////////////////////////////////////////////////////////////////
-const regexp = /^\?[\s]?(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\d\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\d\/]+))?)+(?:\s(?:-|in|to|into|в|сколько)?\s([^\s\d]+)$)?/i;
+const regexp = /^(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)+(?:\s(?:-|in|to|into|в|сколько)?\s((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)$)?/i;
 //////////////////////////////////////////////////////////////////////
 console.log("LOADIN LOCAL MEGACONVERTER");
 module.exports = {

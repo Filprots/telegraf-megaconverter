@@ -61,8 +61,18 @@ class UnitsProcessor {
         const lng = (text, opts) => {
             return ctx.i18n.t('__megaconverter.' + text, opts);
         }
-        const from = this.getUnits(units);
+        let from = this.getUnits(units);
         let to = this.getUnits(toUnits);
+        // special case when pattern treated for example('м в мм') as single unit description
+        if (!from.length && !to.length &&
+            units.toLowerCase().includes(' в ')
+        ) {
+            let arr = units.split(' в ');
+            if (arr.length === 2){
+                from = this.getUnits(arr[0]);
+                to = this.getUnits(arr[1]);
+            }
+        }
 
         if (from.length) {
             if (from.length > 1) {
