@@ -50,6 +50,6 @@ async function router(ctx, result) {
 function callbackQueryTest(ctx) {
     return ctx.update.callback_query &&
         ctx.update.callback_query.data &&
-        ctx.update.callback_query.data.substring(0, unitsProcessor.callbackPrefix.length) === unitsProcessor.callbackPrefix;
+        unitsProcessor.callbackTest(ctx.update.callback_query.data);
 }
 

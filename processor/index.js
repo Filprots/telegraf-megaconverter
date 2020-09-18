@@ -8,6 +8,7 @@ class UnitsProcessor {
         this._regexpMaps = {};
         this._bases = {};
         this.callbackPrefix = 'cnvrtr';
+        this.callbackVariantsDelimeter = '--or--';
     }
 
     _populateQueryMap(unit, query) {
@@ -57,18 +58,19 @@ class UnitsProcessor {
         return _.union(queryMatch, regexpMatch);
     }
 
-    process(ctx, num, units, toUnits) {
+    process(ctx, num, units, toUnits, options) {
+        options = options || {unitsRaw: true};
         const lng = (text, opts) => {
             return ctx.i18n.t('__megaconverter.' + text, opts);
         }
-        let from = this.getUnits(units);
-        let to = this.getUnits(toUnits);
+        let from = options.unitsRaw ? this.getUnits(units) : units;
+        let to = options.unitsRaw ? this.getUnits(toUnits) : toUnits;
         // special case when pattern treated for example('м в мм') as single unit description
-        if (!from.length && !to.length &&
+        if (options.unitsRaw && !from.length && !to.length &&
             units.toLowerCase().includes(' в ')
         ) {
             let arr = units.split(' в ');
-            if (arr.length === 2){
+            if (arr.length === 2) {
                 from = this.getUnits(arr[0]);
                 to = this.getUnits(arr[1]);
             }
@@ -76,57 +78,67 @@ class UnitsProcessor {
 
         if (from.length) {
             if (from.length > 1) {
+                // now check if we have TO Variants and it is defined
+                if (to && to.length) {
+                    from = this._filterSameUnitsType(to, from);
+                    if (!from.length) {
+                        return {final: [lng('unconvertable')]}
+                    } else if (from.length === 1) {
+                        // do nothing
+                    } else return this._buildClarifyRequest(lng, num, from, to)
+                } else return this._buildClarifyRequest(lng, num, from, to)
                 // now check if we have some variants 2+ for from - build inline keyboard and ask to clarify
-                return {
-                    clarify: this._buildClarifyRequest(lng, num, from)
-                }
             }
             // ok, we have only one variant - proceed
             // now check if we have TO
             if (to.length) {
                 // for to operand filter variants preserving only of the same type as from
                 to = this._filterSameUnitsType(from, to);
-                if (!to.length) return { // if no to operands left after filter - give the final result
-                    final: this._buildFinalResults(lng, num, from)
-                }
+                // if no to operands left after filter - give the final result
+                if (!to.length) return this._buildFinalResults(lng, num, from)
+                // if no to operands left after filter - give the final result
+                if (!to.length) return this._buildFinalResults(lng, num, from)
                 if (to.length > 1) {// check if we have many variants and - build inline keyboard to clarify TO what
-                    return {
-                        clarify: this._buildClarifyRequest(lng, num, from, to)
-                    }
+                    return this._buildClarifyRequest(lng, num, from, to)
                 } else { // if to operands is one - render final result
-                    return {
-                        final: this._buildFinalResults(lng, num, from, to)
-                    }
+                    return this._buildFinalResults(lng, num, from, to)
                 }
             } else {
-                return { // if no TO operands - render final result
-                    final: this._buildFinalResults(lng, num, from)
-                }
+                // if no TO operands - render final result
+                return this._buildFinalResults(lng, num, from, to)
             }
         } else { // build no result and tip how to proper build results
-            return {final: this._buildFinalResults(lng, num)};
+            return this._buildFinalResults(lng, num, from, to)
         }
     }
 
     _filterSameUnitsType(from, to) {
         if (!to.length) return [];
-        return _.filter(to, u => u.baseName === from[0].baseName);
+        if (_.every(from, f => f.baseName === from[0].baseName)) {
+            return _.filter(to, u => u.baseName === from[0].baseName);
+        } else return to;
     }
 
     _buildClarifyRequest(lng, num, from, to) {
         let text, buttons;
-        if (to) {
-            text = lng('clarify_to');
-            buttons = this._buildButtons(lng, num, from, to, 'to')
-        } else if (from) {
+        if (from && from.length > 1) {
             text = lng('clarify_from');
             buttons = this._buildButtons(lng, num, from, to, 'from')
+        } else if (to) {
+            to = this._filterSameUnitsType(from, to);
+            text = lng('clarify_to') + ` ${lng(`_${from[0].baseName}.${from[0].id}`, {count: num})}`;
+            buttons = this._buildButtons(lng, num, from, to, 'to')
         }
-        return [text, buttons];
+        if (text && buttons) {
+            return {clarify: [text, buttons]}
+        } else {
+            return {final: [lng('tryAgain')]}
+        }
+
     }
 
     _buildFinalResults(lng, num, from, to) {
-        if (!from) return [lng('noMatch')];
+        if (!from) return {final: [lng('noMatchFrom')]};
 
         from = from[0];
         to = to ? to[0] : undefined;
@@ -134,7 +146,7 @@ class UnitsProcessor {
         //
         if (to) {
             const resNum = this._convert(num, from, to);
-            return [`${lng(`_${bN}.${from.id}`, {count: num})} = ${lng(`_${bN}.${to.id}`, {count: resNum})}`]
+            return {final: [`${lng(`_${bN}.${from.id}`, {count: num})} = ${lng(`_${bN}.${to.id}`, {count: resNum})}`]}
         } else {
             const base = this._bases[from.baseName].base;
             const fromString = `<b>${lng(`_${bN}.${from.id}`, {count: num})}</b>`;
@@ -143,18 +155,19 @@ class UnitsProcessor {
                 return `<b>${lng(`_${bN}.${u.id}`, {count: this._convert(num, from, u)})}</b>\n`;
             });
             const answer = `${fromString} = \n\n` + converts.join('');
-            return [answer];
+            return {
+                notice: [lng('noToGiven')],
+                final: [answer]
+            };
         }
     }
 
     clarify(ctx, optionPicked) {
-        console.log(optionPicked);
+        let {num, fromBase, from, toBase, to} = this._dispatchCallbackResult(optionPicked);
+        from = [this._bases[fromBase].base[from]];
+        to = to ? _.map(to.split(this.callbackVariantsDelimeter), t => this._bases[toBase].base[t]) : [];
 
-        // here we recieve string from callback (this.callbackPrefix-<<num>>-<<from>>(-<<to>>)?)
-        // clarified can be from or to we dont know and we dont need to know))
-        // dispatch it
-        // and put in process
-        // done
+        return this.process(ctx, num, from, to, {unitsRaw: false});
     }
 
     _convert(num, from, to) {
@@ -164,17 +177,33 @@ class UnitsProcessor {
     _buildButtons(lng, num, from, to, iterate) {
         const iterable = iterate === 'from' ? from : to;
         let buttons = [];
-        _.each(iterable, varr => {
-            buttons.push(Markup.callbackButton(iterable === 'from' ?
-                `${lng(`_${varr.baseName}.${varr.id}`, {count: num})}` :
-                `${lng(`_${from[0].baseName}.${from[0].id}`, {count: num})} > ${lng(`_${varr.baseName}.${varr.id}`, {count: 1})}`, // BUTTON TEXT
-                this._prepareCallbackString({
-                    prefix: this.callbackPrefix,
-                    num: num,
-                    from: iterable === 'from' ? varr.id : from[0].id,
-                    to: iterable === 'to' ? varr.id : to ? to.id : undefined
-                }))); // BUTTON ACTION)
-        });
+
+        if (iterate === 'from') {
+            _.each(iterable, varFrom => {
+                buttons.push(Markup.callbackButton(`${lng(`_${varFrom.baseName}.${varFrom.id}`, {count: num})}`,
+                    this._prepareCallbackString({
+                        prefix: this.callbackPrefix,
+                        num: num,
+                        fromBase: varFrom.baseName,
+                        from: varFrom.id,
+                        toBase: to && to[0] && to[0].baseName,
+                        to: to && to.length ? _.pluck(to, 'id').join(this.callbackVariantsDelimeter) : undefined
+                    }))); // BUTTON ACTION)
+            });
+        } else if (iterate === 'to') {
+            _.each(iterable, varTo => {
+                buttons.push(Markup.callbackButton(
+                    `${lng(`_${varTo.baseName}.${varTo.id}`, {count: 1}).substr(2)}`, // BUTTON TEXT
+                    this._prepareCallbackString({
+                        prefix: this.callbackPrefix,
+                        num: num,
+                        fromBase: from[0].baseName,
+                        from: from[0].id,
+                        toBase: varTo.baseName,
+                        to: varTo.id,
+                    }))); // BUTTON ACTION)
+            });
+        }
         buttons = divideIntoLines(buttons);
 
         return Extra.HTML().markup(m => m.inlineKeyboard(buttons));
@@ -189,11 +218,22 @@ class UnitsProcessor {
         }
     }
 
+    callbackTest(clb) {
+        try {
+            clb = JSON.parse(clb);
+            return clb[0] === this.callbackPrefix;
+        } catch (e) {
+            return false;
+        }
+    }
+
     _dataIndexes = {
         prefix: 0,
         num: 1,
-        from: 2,
-        to: 3,
+        fromBase: 2,
+        from: 3,
+        toBase: 4,
+        to: 5,
     }
 
     _prepareCallbackString(data = {}) {
@@ -204,13 +244,14 @@ class UnitsProcessor {
                 dataArray[indexes[k]] = v;
             }
         });
-        return encodeURIComponent(JSON.stringify(dataArray))
+        console.log(dataArray);
+        return JSON.stringify(dataArray)
     }
 
     _dispatchCallbackResult(callbackData) {
         let result;
         try {
-            result = JSON.parse(decodeURIComponent(callbackData));
+            result = JSON.parse(callbackData);
         } catch (e) {
             return false;
         }
