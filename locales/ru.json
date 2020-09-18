@@ -17,7 +17,7 @@
       "month": "${pluralize(count, 'месяц', 'месяца', 'месяцев')}",
       "year": "${pluralize(count, 'год', 'года', 'лет')}",
       "century": "${pluralize(count, 'век', 'века', 'веков')}"
-    }
+    },
     "_length": {
       "angstr": "${pluralize(count, 'ангстрем', 'ангстрема', 'ангстрем')}",
       "nanom": "${pluralize(count, 'нанометр', 'нанометра', 'нанометров')}",
@@ -31,7 +31,7 @@
       "yard": "${pluralize(count, 'ярд', 'ярда', 'ярдов')}",
       "feet": "${pluralize(count, 'фут', 'фута', 'футов')}",
       "inch": "${pluralize(count, 'дюйм', 'дюйма', 'дюймов')}"
-    }
+    },
     "_speed": {
       "nm_fs":"${count} нм/фс",
       "mcm_fs":"${count} мкм/фс",

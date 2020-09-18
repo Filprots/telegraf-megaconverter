@@ -4,7 +4,7 @@ const _ = require.main.require('underscore');
 const unitsProcessor = require('./processor');
 
 //////////////////////////////////////////////////////////////////////
-const regexp = /^((\d*)[.,]?(\d*))\s([\S]+)(\s(-|в|to|сколько)?\s([\s\S]+)$)?/;
+const regexp = /^\?(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\d]+)(?:\s(?:в|per)\s)?(?:[^\s\d]+))+(?:\s(?:-|in|to|into|в|сколько)?\s([\S\D]+)$)?/i;
 //////////////////////////////////////////////////////////////////////
 console.log("LOADIN LOCAL MEGACONVERTER");
 module.exports = {
@@ -19,9 +19,9 @@ module.exports = {
 
 // LISTENER TO USER INPUT WITH NEEDED PATTERN
 async function input(ctx, next) {
-    const num = parseFloat((+ctx.match[2] || 0) + '.' + (String(ctx.match[3]) || '0'));
-    const units = ctx.match[4];
-    const toUnits = ctx.match[7];
+    const num = parseFloat((+ctx.match[1] || 0) + '.' + (String(ctx.match[2]) || '0'));
+    const units = ctx.match[3];
+    const toUnits = ctx.match[4] && ctx.match[4].trim();
     console.log(num, units, toUnits);
     const result = unitsProcessor.process(ctx, num, units, toUnits);
     await router(ctx, result);
