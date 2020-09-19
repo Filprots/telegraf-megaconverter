@@ -188,6 +188,23 @@
       "yd_century":"${count} ярд/век",
       "ft_century":"${count} фут/век",
       "in_century":"${count} дюйм/век"
+    },
+    "_volume": {
+      "cubic_metre": "${pluralize(count, 'кубический метр', 'кубических метра', 'кубических метров')}",
+      "cubic_kilometre": "${pluralize(count, 'кубический километр', 'кубических километра', 'кубических километров')}",
+      "cubic_decimetre": "${pluralize(count, 'кубический дециметр', 'кубических дециметра', 'кубических дециметров')}",
+      "cubic_centimetre": "${pluralize(count, 'кубический сантиметр', 'кубических сантиметра', 'кубических сантиметров')}",
+      "cubic_millimetre": "${pluralize(count, 'кубический миллиметр', 'кубических миллиметра', 'кубических миллиметров')}",
+      "hectolitre": "${pluralize(count, 'гектолитр', 'гектолитра', 'гектолитров')}",
+      "decalitre": "${pluralize(count, 'декалитр', 'декалитра', 'декалитров')}",
+      "litre": "${pluralize(count, 'литр', 'литра', 'литров')}",
+      "decilitre": "${pluralize(count, 'децилитр', 'децилитра', 'децилитров')}",
+      "centilitre": "${pluralize(count, 'сантилитр', 'сантилитра', 'сантилитров')}",
+      "microlitre": "${pluralize(count, 'микролитр', 'микролитра', 'микролитров')}",
+      "gallon_usa": "${pluralize(count, 'галлон', 'галлона', 'галлон')}",
+      "pint_usa": "${pluralize(count, 'пинта', 'пинты', 'пинт')}",
+      "fluid_ounce_usa": "${pluralize(count, 'жидкая унция', 'жидкие унции', 'жидких унций')}",
+      "barrel_oil": "${pluralize(count, 'нефтяной баррель', 'нефтяных барреля', 'нефтяных баррелей')}"
     }
   }
 }
