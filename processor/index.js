@@ -151,8 +151,11 @@ class UnitsProcessor {
             const base = this._bases[from.baseName].base;
             const fromString = `<b>${lng(`_${bN}.${from.id}`, {count: num})}</b>`;
             const converts = _.map(base, u => {
-                if (u.id === from.id) return `&gt; <u>${lng(`_${bN}.${u.id}`, {count: this._convert(num, from, u)})}</u>\n`
-                return `<b>${lng(`_${bN}.${u.id}`, {count: this._convert(num, from, u)})}</b>\n`;
+                const result = this._convert(num, from, u);
+                if (result / num > 10000000) return '';
+                if (num / result > 10000000) return '';
+                if (u.id === from.id) return `&gt; <u>${lng(`_${bN}.${u.id}`, {count: result})}</u>\n`
+                return `<b>${lng(`_${bN}.${u.id}`, {count: result})}</b>\n`;
             });
             const answer = `${fromString} = \n\n` + converts.join('');
             return {
