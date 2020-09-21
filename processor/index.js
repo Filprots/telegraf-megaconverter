@@ -56,15 +56,20 @@ class UnitsProcessor {
 
     getUnits(query) {
         if (!query) return [];
-        query = String(query) || '';
+        query = String(query).toLowerCase() || '';
+        const unSigned = String(query || '').toLowerCase().replace(/[^A-Za-zА-Яа-я0-9]/g, '');
         const queryMatch = this._queryMaps[query];
+        const unSignedMatch = this._queryMaps[unSigned];
         const regexpMatch = [];
         _.each(this._regexpMaps, tester => {
             if (tester.regexp.test(query)) {
                 regexpMatch.push(...tester.units);
             }
+            if (tester.regexp.test(unSigned)) {
+                regexpMatch.push(...tester.units);
+            }
         });
-        return _.union(queryMatch, regexpMatch);
+        return _.union(queryMatch, unSignedMatch, regexpMatch);
     }
 
     process(ctx, num, units, toUnits, options) {
@@ -147,7 +152,7 @@ class UnitsProcessor {
     }
 
     _buildFinalResults(lng, num, from, to) {
-        if (!from) return {final: [lng('noMatchFrom')]};
+        if (!from || !from.length) return {final: [lng('noMatchFrom')]};
 
         from = from[0];
         to = to ? to[0] : undefined;

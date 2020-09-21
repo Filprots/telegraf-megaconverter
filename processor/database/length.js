@@ -41,7 +41,7 @@ const data = {
     },
     feet: {
         r: '3.281',
-        query: ['foot',/^f(ee(t(s)?)?)?$/i, 'ft', 'fts', /^ф(ут(ов|а|ы)?)?$/i]
+        query: ['foot', /^f(ee(t(s)?)?)?$/i, 'ft', 'fts', /^ф(ут(ов|а|ы)?)?$/i]
     },
     inch: {
         r: '3.281*12',
