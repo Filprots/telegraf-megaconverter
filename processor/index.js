@@ -1,6 +1,8 @@
 const _ = require.main.require('underscore');
 const Extra = require.main.require('telegraf/extra');
 const Markup = require.main.require('telegraf/markup');
+const Math = require('mathjs');
+// const Decimal = require('decimal.js');
 
 class UnitsProcessor {
     constructor() {
@@ -9,6 +11,12 @@ class UnitsProcessor {
         this._bases = {};
         this.callbackPrefix = 'cnvrtr';
         this.callbackVariantsDelimeter = '--or--';
+        this._mathConfig = {
+            number: 'BigNumber',
+            // Number of significant digits for BigNumbers
+            precision: 15
+        }
+        this._math = Math.create(Math.all, this._mathConfig);
     }
 
     _populateQueryMap(unit, query) {
@@ -174,7 +182,13 @@ class UnitsProcessor {
     }
 
     _convert(num, from, to) {
-        return num / from.r * to.r;
+        // THIS IS AT WHAT JAVASCRIPT SUCKS - MATHEMATICS
+        // console.log(num / from.r * to.r);
+        // SO WE USE mathjs
+        if (from.r === to.r) return num;
+        // console.log(this._math.evaluate(`${num} / (${from.r}) * (${to.r})`));
+        return this._math.evaluate(`${num} / (${from.r}) * (${to.r})`);
+        // return amount / fromR * toR;
     }
 
     _buildButtons(lng, num, from, to, iterate) {

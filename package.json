@@ -1,6 +1,6 @@
 {
   "name": "telegraf-megaconverter",
-  "version": "0.0.42",
+  "version": "0.0.43",
   "description": "Telegraf middleware that converts units",
   "main": "index.js",
   "scripts": {
@@ -16,5 +16,7 @@
     "telegraf": "3.x",
     "underscore": "1.x"
   },
-  "dependencies": {}
+  "dependencies": {
+    "mathjs": "^7.2.0"
+  }
 }
