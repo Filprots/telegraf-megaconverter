@@ -2,6 +2,7 @@ const _ = require.main.require('underscore');
 const Extra = require.main.require('telegraf/extra');
 const Markup = require.main.require('telegraf/markup');
 const Math = require('mathjs');
+
 // const Decimal = require('decimal.js');
 
 class UnitsProcessor {
@@ -14,7 +15,7 @@ class UnitsProcessor {
         this._mathConfig = {
             number: 'BigNumber',
             // Number of significant digits for BigNumbers
-            precision: 15
+            precision: 12
         }
         this._math = Math.create(Math.all, this._mathConfig);
     }
@@ -187,7 +188,8 @@ class UnitsProcessor {
         // SO WE USE mathjs
         if (from.r === to.r) return num;
         // console.log(this._math.evaluate(`${num} / (${from.r}) * (${to.r})`));
-        return this._math.evaluate(`${num} / (${from.r}) * (${to.r})`);
+        // return this._math.format(this._math.evaluate(`${num} / (${from.r}) * (${to.r})`, {precision: 1}));
+        return this._math.evaluate(`${num} / (${from.r}) * (${to.r})`, {precision: 1});
         // return amount / fromR * toR;
     }
 
