@@ -4,6 +4,8 @@ const speed = require('./speed');
 const volume = require('./volume');
 const area = require('./area');
 const pressure = require('./pressure');
+const weight = require('./weight');
+const temprature = require('./temprature');
 
 module.exports = {
     time,
@@ -11,5 +13,7 @@ module.exports = {
     speed,
     volume,
     area,
-    pressure
+    pressure,
+    weight,
+    temprature
 }

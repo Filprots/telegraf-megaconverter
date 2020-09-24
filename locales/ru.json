@@ -234,6 +234,23 @@
       "millimeter_water": "${pluralize(count, 'миллиметр водяного столба', 'миллиметра водяного столба', 'миллиметров водяного столба')}",
       "feet_water": "${pluralize(count, 'фут водяного столба', 'фута водяного столба', 'футов водяного столба')}",
       "inch_water": "${pluralize(count, 'дюйм водяного столба', 'дюйма водяного столба', 'дюймов водяного столба')}"
+    },
+    "_weight": {
+      "kilogram": "${pluralize(count, 'килограмм', 'килограмма', 'килограмм')}",
+      "centner": "${pluralize(count, 'центнер', 'центнера', 'центнеров')}",
+      "tonn": "${pluralize(count, 'тонна', 'тонны', 'тонн')}",
+      "kilotonn": "${pluralize(count, 'килотонна', 'килотонны', 'килотонн')}",
+      "karat": "${pluralize(count, 'карат', 'карата', 'карат')}",
+      "gram": "${pluralize(count, 'грамм', 'грамма', 'грамм')}",
+      "centigram": "${pluralize(count, 'сантиграмм', 'сантиграмма', 'сантиграмм')}",
+      "milligram": "${pluralize(count, 'миллиграмм', 'миллиграмма', 'миллиграмм')}",
+      "microgram": "${pluralize(count, 'микрограмм', 'микрограмма', 'микрограмм')}",
+      "pound": "${pluralize(count, 'фунт', 'фунта', 'фунтов')}",
+      "ounce": "${pluralize(count, 'унция', 'унции', 'унций')}"
+  },
+    "_temprature": {
+      "celsius": "${count} °С",
+      "fahrenheit": "${count} °F",
+      "kelvin": "${count} К"
     }
-  }
 }
