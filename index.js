@@ -43,7 +43,7 @@ async function clarify(ctx, next) {
 
 // ROUTER
 async function router(ctx, result) {
-    const TIMEDELAY = 2000;
+    const TIMEDELAY = 500;
     let chat_id;
     if (!result || (!result.final && !result.clarify)) {
         console.error('No Final Result');

@@ -55,6 +55,9 @@ class UnitsProcessor {
     getUnits(unitsString) {
         if (!unitsString) return [[], []];
         const self = this;
+        // FIRST TRY FULL MATCH
+        const fullMatch = getQueryResults(unitsString);
+        if (fullMatch.length) return [fullMatch, []];
         // PARSE UNITS INPUT STRING (DETECT FROM AND TO UNITS)
         const ableDelimeters = [
             '-', ' in ', ' to ', ' into ', ' в ', ' сколько '
