@@ -4,14 +4,15 @@ const _ = require.main.require('underscore');
 const unitsProcessor = require('./processor');
 
 //////////////////////////////////////////////////////////////////////
-const regexp = /^(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)+(?:\s(?:-|in|to|into|в|сколько)?\s((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)$)?/i;
+// const regexp = /^(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)+(?:\s(?:-|in|to|into|в|сколько)?\s((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)$)?/i;
+const regexp = /^(?:([\d]*)[.,]?([\d]*))([\s\S]+)$/i;
 //////////////////////////////////////////////////////////////////////
 
 module.exports = {
-    middleware: Telegraf.compose([
+    middleware: Telegraf.optional(noScenesEnteredTest, Telegraf.compose([
         Telegraf.hears(regexp, input),
         Telegraf.optional(callbackQueryTest, clarify)
-    ]),
+    ])),
     locales: {
         'ru': require('./locales/ru.json')
     }
@@ -19,11 +20,14 @@ module.exports = {
 
 // LISTENER TO USER INPUT WITH NEEDED PATTERN
 async function input(ctx, next) {
-    const num = parseFloat((+ctx.match[1] || 0) + '.' + (String(ctx.match[2]) || '0'));
-    const units = ctx.match[3];
-    const toUnits = ctx.match[4] && ctx.match[4].trim();
-    console.log(num, units, toUnits);
-    const result = unitsProcessor.process(ctx, num, units, toUnits);
+    const num = ctx.match[1] ? parseFloat((+ctx.match[1] || 0) + '.' + (String(ctx.match[2]) || '0')) : undefined;
+    const allUnitsString = ctx.match[3].trim();
+    // const toUnits = ctx.match[4] && ctx.match[4].trim();
+    // console.log(num, allUnitsString);
+    const t1 = Date.now();
+    const result = unitsProcessor.process(ctx, num, allUnitsString, null);
+    const t2 = Date.now();
+    console.log(`Request "${ctx.match[0]}" processed in ${t2 - t1} milliseconds`)
     await router(ctx, result);
     return next();
 }
@@ -41,7 +45,10 @@ async function clarify(ctx, next) {
 async function router(ctx, result) {
     const TIMEDELAY = 2000;
     let chat_id;
-    if (!result && (!result.final || !result.clarify)) return ctx.reply('Internal ERROR');
+    if (!result || (!result.final && !result.clarify)) {
+        console.error('No Final Result');
+        return undefined;
+    }
     try {
         chat_id = ctx.update.message ? ctx.update.message.chat.id : ctx.update.callback_query.from.id
     } catch (e) {
@@ -93,5 +100,9 @@ function callbackQueryTest(ctx) {
     return ctx.update.callback_query &&
         ctx.update.callback_query.data &&
         unitsProcessor.callbackTest(ctx.update.callback_query.data);
+}
+
+function noScenesEnteredTest(ctx) {
+    return !ctx.session.__scenes.current;
 }
 

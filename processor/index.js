@@ -3,8 +3,6 @@ const Extra = require.main.require('telegraf/extra');
 const Markup = require.main.require('telegraf/markup');
 const Math = require('mathjs');
 
-// const Decimal = require('decimal.js');
-
 class UnitsProcessor {
     constructor() {
         this._queryMaps = {};
@@ -54,105 +52,156 @@ class UnitsProcessor {
         return this;
     }
 
-    getUnits(query) {
-        if (!query) return [];
-        query = String(query).toLowerCase() || '';
-        const unSigned = String(query || '').toLowerCase().replace(/[^A-Za-zА-Яа-я0-9]/g, '');
-        const queryMatch = this._queryMaps[query];
-        const unSignedMatch = this._queryMaps[unSigned];
-        const regexpMatch = [];
-        _.each(this._regexpMaps, tester => {
-            if (tester.regexp.test(query)) {
-                regexpMatch.push(...tester.units);
-            }
-            if (tester.regexp.test(unSigned)) {
-                regexpMatch.push(...tester.units);
-            }
+    getUnits(unitsString) {
+        if (!unitsString) return [[], []];
+        const self = this;
+        // PARSE UNITS INPUT STRING (DETECT FROM AND TO UNITS)
+        const ableDelimeters = [
+            '-', ' in ', ' to ', ' into ', ' в ', ' сколько '
+        ];
+        let fromVariants = [];
+        let toVariants = [];
+        _.each(ableDelimeters, d => {
+            const split = unitsString.split(d);
+            _.each(split, (slice, index) => {
+                if (split.length === 1) { // if variant is only one in this delimeter case
+                    fromVariants.push(...getQueryResults(slice));
+                } else if (!split[index + 1]) { // if this is last variant in series
+                    fromVariants.push(...getQueryResults(unitsString));
+                } else {
+                    let breakingIndex = 0;
+                    let first = '';
+                    while (split[breakingIndex] && breakingIndex <= index) {
+                        first && (first += d);
+                        first += split[breakingIndex];
+                        breakingIndex++;
+                    }
+                    breakingIndex = index + 1;
+                    let rest = '';
+                    while (split[breakingIndex]) {
+                        rest && (rest += d);
+                        rest += split[breakingIndex];
+                        breakingIndex++;
+                    }
+                    fromVariants.push(...getQueryResults(first));
+                    toVariants.push(...getQueryResults(rest));
+                    // console.log(first, ' - ', rest);
+                }
+            });
         });
-        return _.union(queryMatch, unSignedMatch, regexpMatch);
+
+        // console.log("DETECTED FROM VARIANTS:\n", _.map(_.uniq(fromVariants), v => v.id));
+        // console.log("DETECTED TO VARIANTS:\n", _.map(_.uniq(toVariants), v => v.id));
+        return [_.uniq(fromVariants), _.uniq(toVariants)];
+
+        function getQueryResults(query) {
+            if (!query) return [];
+            query = String(query).toLowerCase().trim() || '';
+            const unSigned = String(query || '').toLowerCase().replace(/[^A-Za-zА-Яа-я0-9]/g, '');
+            const queryMatch = self._queryMaps[query];
+            const unSignedMatch = self._queryMaps[unSigned];
+            const regexpMatch = [];
+            _.each(self._regexpMaps, tester => {
+                if (tester.regexp.test(query)) {
+                    regexpMatch.push(...tester.units);
+                }
+                if (tester.regexp.test(unSigned)) {
+                    regexpMatch.push(...tester.units);
+                }
+            });
+            return _.union(queryMatch, unSignedMatch, regexpMatch);
+        }
     }
 
     process(ctx, num, units, toUnits, options) {
-        options = options || {unitsRaw: true};
+        options = options || {unitsRaw: true, silentFail: false};
         const lng = (text, opts) => {
             return ctx.i18n.t('__megaconverter.' + text, opts);
         }
-        let from = options.unitsRaw ? this.getUnits(units) : units;
-        let to = options.unitsRaw ? this.getUnits(toUnits) : toUnits;
-        // special case when pattern treated for example('м в мм') as single unit description
-        if (options.unitsRaw && !from.length && !to.length &&
-            units.toLowerCase().includes(' в ')
-        ) {
-            let arr = units.split(' в ');
-            if (arr.length === 2) {
-                from = this.getUnits(arr[0]);
-                to = this.getUnits(arr[1]);
-            }
+        let from, to;
+        if (options.unitsRaw) {
+            if (units.length > this._MAX_USER_UNPUT_LENGTH) return {final: [lng('unexpectedInput')]};
+            [from, to] = this.getUnits(units);
+        } else {
+            from = units;
+            to = toUnits;
+        }
+        // console.log('FROM-------------\n',from);
+        // console.log('TO---------------\n',to);
+
+        return this._resolveConvertation(lng, num, from, to, options);
+    }
+
+    _resolveConvertation(lng, num, from, to, options) {
+        if (!num) { // if num was not given,
+            num = 1
+            options.silentFail = true;
         }
 
-        if (from.length) {
-            if (from.length > 1) {
-                // now check if we have TO Variants and it is defined
-                if (to && to.length) {
-                    from = this._filterSameUnitsType(to, from);
-                    if (!from.length) {
-                        return {final: [lng('unconvertable')]}
-                    } else if (from.length === 1) {
-                        // do nothing
-                    } else return this._buildClarifyRequest(lng, num, from, to)
-                } else return this._buildClarifyRequest(lng, num, from, to)
-                // now check if we have some variants 2+ for from - build inline keyboard and ask to clarify
-            }
-            // ok, we have only one variant - proceed
-            // now check if we have TO
-            if (to.length) {
-                // for to operand filter variants preserving only of the same type as from
-                to = this._filterSameUnitsType(from, to);
-                // if no to operands left after filter - give the final result
-                if (!to.length) return this._buildFinalResults(lng, num, from)
-                // if no to operands left after filter - give the final result
-                if (!to.length) return this._buildFinalResults(lng, num, from)
-                if (to.length > 1) {// check if we have many variants and - build inline keyboard to clarify TO what
-                    return this._buildClarifyRequest(lng, num, from, to)
-                } else { // if to operands is one - render final result
-                    return this._buildFinalResults(lng, num, from, to)
+        if (!from.length) return this._buildFinalResults(lng, num, [], [], options);
+
+        if (from.length === 1) { // if only one variant from
+            if (to.length) { // if we have options to what
+                to = this._filterSameUnitsType(from[0].baseName, to); // filter only matching for given from
+                if (to.length) {
+                    if (to.length > 1) return this._buildClarifyRequest(lng, num, from, to, options); // clarify which TO
+                    else return this._buildFinalResults(lng, num, from, to, options); // TO option is only one
+                } else return this._buildFinalResults(lng, num, from, [], options); // all TO options gone
+            } else return this._buildFinalResults(lng, num, from, [], options); // no TO options given
+        } else { // if many from variants
+            if (!to.length) return this._buildClarifyRequest(lng, num, from, [], options); // if no TO variants at all (even without filtering)
+            else { // if we have many from and many to (here we need to find out if we have matching from-to pairs)
+                const matchingTo = [];
+                // preserve only that TOes that mactch some of FROMs
+                _.each(from, fromUnit => {
+                    matchingTo.push(..._.filter(to, toUnit => fromUnit.baseName === toUnit.baseName));
+                });
+                // in case we have same TO baseNames, check if when we filter FROM and only variant stays
+                if (matchingTo.length === 1 || _.every(matchingTo, tu => _.some(from, fu => tu.baseName === fu.baseName))) {
+                    const matchingFrom = this._filterSameUnitsType(matchingTo[0].baseName, from);
+                    if (matchingFrom.length === 1) {
+                        if (matchingTo.length === 1) return this._buildFinalResults(lng, num, matchingFrom, matchingTo, options);
+                        else return this._buildClarifyRequest(lng, num, matchingFrom, matchingTo, options);
+                    }
                 }
-            } else {
-                // if no TO operands - render final result
-                return this._buildFinalResults(lng, num, from, to)
+                // else clarify FROM and TO
+                return this._buildClarifyRequest(lng, num, from, matchingTo, options);
             }
-        } else { // build no result and tip how to proper build results
-            return this._buildFinalResults(lng, num, from, to)
         }
     }
 
-    _filterSameUnitsType(from, to) {
-        if (!to.length) return [];
-        if (_.every(from, f => f.baseName === from[0].baseName)) {
-            return _.filter(to, u => u.baseName === from[0].baseName);
-        } else return to;
+    _filterSameUnitsType(baseName, toFilter) {
+        if (!toFilter.length) return [];
+        return _.filter(toFilter, u => u.baseName === baseName);
     }
 
-    _buildClarifyRequest(lng, num, from, to) {
+    _buildClarifyRequest(lng, num, from, to, options) {
         let text, buttons;
         if (from && from.length > 1) {
+            // to = this._filterSameUnitsType(from, to);
             text = lng('clarify_from');
             buttons = this._buildButtons(lng, num, from, to, 'from')
-        } else if (to) {
-            to = this._filterSameUnitsType(from, to);
+        } else if (to && to.length > 1) {
+            // to = this._filterSameUnitsType(from, to);
             text = lng('clarify_to') + ` ${lng(`_${from[0].baseName}.${from[0].id}`, {count: num})}`;
             buttons = this._buildButtons(lng, num, from, to, 'to')
         }
         if (text && buttons) {
             return {clarify: [text, buttons]}
         } else {
-            return {final: [lng('tryAgain')]}
+            if (!options.silentFail) {
+                return {final: [lng('tryAgain')]}
+            } else return undefined;
         }
 
     }
 
-    _buildFinalResults(lng, num, from, to) {
-        if (!from || !from.length) return {final: [lng('noMatchFrom')]};
+    _buildFinalResults(lng, num, from, to, options) {
+        if (!from || !from.length) {
+            if (!options.silentFail) {
+                return {final: [lng('noMatchFrom')]};
+            } else return undefined;
+        }
 
         from = from[0];
         to = to ? to[0] : undefined;
@@ -166,8 +215,8 @@ class UnitsProcessor {
             const fromString = `<b>${lng(`_${bN}.${from.id}`, {count: num})}</b>`;
             const converts = _.map(base, u => {
                 const result = this._convert(num, from, u);
-                if (result / num > 10000000) return '';
-                if (num / result > 10000000) return '';
+                if (result / num > 100000) return '';
+                if (num / result > 100000) return '';
                 if (u.id === from.id) return `&gt; <u>${lng(`_${bN}.${u.id}`, {count: result})}</u>\n`
                 return `<b>${lng(`_${bN}.${u.id}`, {count: result})}</b>\n`;
             });
@@ -182,7 +231,7 @@ class UnitsProcessor {
     clarify(ctx, optionPicked) {
         let {num, fromBase, from, toBase, to} = this._dispatchCallbackResult(optionPicked);
         from = [this._bases[fromBase].base[from]];
-        to = to ? _.map(to.split(this.callbackVariantsDelimeter), t => this._bases[toBase].base[t]) : [];
+        to = to ? _.compact(_.map(to.split(this.callbackVariantsDelimeter), t => this._bases[toBase].base[t])) : [];
 
         return this.process(ctx, num, from, to, {unitsRaw: false});
     }
