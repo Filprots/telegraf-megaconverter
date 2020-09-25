@@ -157,7 +157,7 @@ class UnitsProcessor {
                     matchingTo.push(..._.filter(to, toUnit => fromUnit.baseName === toUnit.baseName));
                 });
                 // in case we have same TO baseNames, check if when we filter FROM and only variant stays
-                if (matchingTo.length === 1 || _.every(matchingTo, tu => _.some(from, fu => tu.baseName === fu.baseName))) {
+                if (matchingTo.length && (matchingTo.length === 1 || _.every(matchingTo, tu => _.some(from, fu => tu.baseName === fu.baseName)))) {
                     const matchingFrom = this._filterSameUnitsType(matchingTo[0].baseName, from);
                     if (matchingFrom.length === 1) {
                         if (matchingTo.length === 1) return this._buildFinalResults(lng, num, matchingFrom, matchingTo, options);
