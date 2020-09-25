@@ -248,10 +248,11 @@
       "microgram": "${pluralize(count, 'микрограмм', 'микрограмма', 'микрограмм')}",
       "pound": "${pluralize(count, 'фунт', 'фунта', 'фунтов')}",
       "ounce": "${pluralize(count, 'унция', 'унции', 'унций')}"
-  },
+    },
     "_temprature": {
       "celsius": "${count} °С",
       "fahrenheit": "${count} °F",
       "kelvin": "${count} К"
     }
+  }
 }
