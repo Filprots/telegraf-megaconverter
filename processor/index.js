@@ -9,7 +9,7 @@ class UnitsProcessor {
         this._regexpMaps = {};
         this._bases = {};
         this.callbackPrefix = 'cnvrtr';
-        this.callbackVariantsDelimeter = '--or--';
+        this.callbackVariantsDelimeter = '%';
         this._mathConfig = {
             number: 'BigNumber',
             // Number of significant digits for BigNumbers
@@ -164,11 +164,11 @@ class UnitsProcessor {
                 });
                 // in case we have same TO baseNames, check if when we filter FROM and only variant stays
                 if (matchingTo.length && (matchingTo.length === 1 || _.every(matchingTo, tu => _.some(from, fu => tu.baseName === fu.baseName)))) {
-                    const matchingFrom = this._filterSameUnitsType(matchingTo[0].baseName, from);
-                    if (matchingFrom.length === 1) {
-                        if (matchingTo.length === 1) return this._buildFinalResults(lng, num, matchingFrom, matchingTo, options);
-                        else return this._buildClarifyRequest(lng, num, matchingFrom, matchingTo, options);
-                    }
+                    const matchingFrom = this._filterSameUnitsType(_.map(matchingTo, mt => mt.baseName), from);
+                    // console.log("DETECTED MATCHNIG FROM VARIANTS:\n", _.map(matchingFrom, v => v.id));
+                    // console.log("DETECTED MATHING TO VARIANTS:\n", _.map(matchingTo, v => v.id));
+                    if (matchingFrom.length === 1 && matchingTo.length === 1) return this._buildFinalResults(lng, num, matchingFrom, matchingTo, options);
+                    else return this._buildClarifyRequest(lng, num, matchingFrom, matchingTo, options);
                 }
                 // else clarify FROM and TO
                 return this._buildClarifyRequest(lng, num, from, matchingTo, options);
@@ -176,19 +176,20 @@ class UnitsProcessor {
         }
     }
 
-    _filterSameUnitsType(baseName, toFilter) {
-        if (!toFilter.length) return [];
-        return _.filter(toFilter, u => u.baseName === baseName);
+    _filterSameUnitsType(baseNames, toFilter) {
+        if (!toFilter || !toFilter.length) return [];
+        if (!Array.isArray(baseNames)) baseNames = [baseNames];
+        return _.filter(toFilter, u => baseNames.includes(u.baseName));
     }
 
     _buildClarifyRequest(lng, num, from, to, options) {
         let text, buttons;
         if (from && from.length > 1) {
-            // to = this._filterSameUnitsType(from, to);
+            to = this._filterSameUnitsType(_.map(from, fu => fu.baseName), to);
             text = lng('clarify_from');
             buttons = this._buildButtons(lng, num, from, to, 'from')
         } else if (to && to.length > 1) {
-            // to = this._filterSameUnitsType(from, to);
+            to = this._filterSameUnitsType(_.map(from, fu => fu.baseName), to);
             text = lng('clarify_to') + ` ${lng(`_${from[0].baseName}.${from[0].id}`, {count: num})}`;
             buttons = this._buildButtons(lng, num, from, to, 'to')
         }
@@ -235,9 +236,9 @@ class UnitsProcessor {
     }
 
     clarify(ctx, optionPicked) {
-        let {num, fromBase, from, toBase, to} = this._dispatchCallbackResult(optionPicked);
-        from = [this._bases[fromBase].base[from]];
-        to = to ? _.compact(_.map(to.split(this.callbackVariantsDelimeter), t => this._bases[toBase].base[t])) : [];
+        let {num, unitsBase, from, to} = this._dispatchCallbackResult(optionPicked);
+        from = [this._bases[unitsBase].base[from]];
+        to = to ? _.compact(_.map(to.split(this.callbackVariantsDelimeter), t => this._bases[unitsBase].base[t])) : [];
 
         return this.process(ctx, num, from, to, {unitsRaw: false});
     }
@@ -259,7 +260,7 @@ class UnitsProcessor {
         // turn base units to to
         if (to === baseUnit) finalNum = basedNum;
         else if (to.difference) finalNum = this._math.evaluate(to.r.replace(/x/i, basedNum), {precision: 1});
-        else finalNum = this._math.evaluate(`${num} / 1 * (${to.r})`, {precision: 1});
+        else finalNum = this._math.evaluate(`${basedNum} / 1 * (${to.r})`, {precision: 1});
         return finalNum;
     }
 
@@ -273,9 +274,8 @@ class UnitsProcessor {
                     this._prepareCallbackString({
                         prefix: this.callbackPrefix,
                         num: num,
-                        fromBase: varFrom.baseName,
+                        unitsBase: varFrom.baseName,
                         from: varFrom.id,
-                        toBase: to && to[0] && to[0].baseName,
                         to: to && to.length ? _.pluck(to, 'id').join(this.callbackVariantsDelimeter) : undefined
                     }))); // BUTTON ACTION)
             });
@@ -286,9 +286,8 @@ class UnitsProcessor {
                     this._prepareCallbackString({
                         prefix: this.callbackPrefix,
                         num: num,
-                        fromBase: from[0].baseName,
+                        unitsBase: from[0].baseName,
                         from: from[0].id,
-                        toBase: varTo.baseName,
                         to: varTo.id,
                     }))); // BUTTON ACTION)
             });
@@ -319,9 +318,8 @@ class UnitsProcessor {
     _dataIndexes = {
         prefix: 0,
         num: 1,
-        fromBase: 2,
+        unitsBase: 2,
         from: 3,
-        toBase: 4,
         to: 5,
     }
 
