@@ -36,7 +36,10 @@ class UnitsProcessor {
     register(units) {
         _.each(units, (base, baseName) => {
             // add base
-            this._bases[baseName] = {base};
+            this._bases[baseName] = {
+                base,
+                baseUnit: _.find(base, u => String(u.r) === '1') // detect base unit
+            };
             // inject map
             _.each(base, (u) => { // iterate units
                 _.each(u.query, txt => { // iterate unit queries
@@ -246,8 +249,18 @@ class UnitsProcessor {
         if (from.r === to.r) return num;
         // console.log(this._math.evaluate(`${num} / (${from.r}) * (${to.r})`));
         // return this._math.format(this._math.evaluate(`${num} / (${from.r}) * (${to.r})`, {precision: 1}));
-        return this._math.evaluate(`${num} / (${from.r}) * (${to.r})`, {precision: 1});
-        // return amount / fromR * toR;
+        // find base unit
+        let {baseUnit} = this._bases[from.baseName];
+        let basedNum, finalNum;
+        // turn from to base units
+        if (from === baseUnit) basedNum = num;
+        else if (from.difference) basedNum = this._math.evaluate(from.r.replace(/x/i, num), {precision: 1});
+        else basedNum = this._math.evaluate(`${num} / (${from.r}) * 1`, {precision: 1});
+        // turn base units to to
+        if (to === baseUnit) finalNum = basedNum;
+        else if (to.difference) finalNum = this._math.evaluate(to.r.replace(/x/i, basedNum), {precision: 1});
+        else finalNum = this._math.evaluate(`${num} / 1 * (${to.r})`, {precision: 1});
+        return finalNum;
     }
 
     _buildButtons(lng, num, from, to, iterate) {
