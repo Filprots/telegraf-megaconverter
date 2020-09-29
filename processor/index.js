@@ -139,7 +139,7 @@ class UnitsProcessor {
     }
 
     _resolveConvertation(lng, num, from, to, options) {
-        if (!num) { // if num was not given,
+        if (isNaN(num)) { // if num was not given,
             num = 1
             options.silentFail = true;
         }

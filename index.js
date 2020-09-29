@@ -5,7 +5,7 @@ const unitsProcessor = require('./processor');
 
 //////////////////////////////////////////////////////////////////////
 // const regexp = /^(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)+(?:\s(?:-|in|to|into|в|сколько)?\s((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)$)?/i;
-const regexp = /^(?:([\d]*)[.,]?([\d]*))([\s\S]+)$/i;
+const regexp = /^((-?[\d]*)[.,]?([\d]*))([\s\S]+)$/i;
 //////////////////////////////////////////////////////////////////////
 
 module.exports = {
@@ -20,8 +20,13 @@ module.exports = {
 
 // LISTENER TO USER INPUT WITH NEEDED PATTERN
 async function input(ctx, next) {
-    const num = ctx.match[1] ? parseFloat((+ctx.match[1] || 0) + '.' + (String(ctx.match[2]) || '0')) : undefined;
-    const allUnitsString = ctx.match[3].trim();
+    let num;
+    if (ctx.match[1]) {
+        const baseNum = !isNaN(ctx.match[2]) ? ctx.match[2] : ctx.match[2] === '-' ? '-0' : 0;
+        const afterPointNum = !isNaN(ctx.match[3]) ? ctx.match[3] : 0;
+        num = parseFloat(String(baseNum) + '.' + String(afterPointNum));
+    }
+    const allUnitsString = ctx.match[4].trim();
     // const toUnits = ctx.match[4] && ctx.match[4].trim();
     // console.log(num, allUnitsString);
     const t1 = Date.now();
