@@ -250,14 +250,14 @@
       "ounce": "${pluralize(count, 'унция', 'унции', 'унций')}"
     },
     "_temprature": {
-      "celsius": "${count} °С",
-      "fahrenheit": "${count} °F",
-      "kelvin": "${count} К",
-      "rankin": "${count} °R",
-      "deg_newton": "${count} °N",
-      "reaumur": "${count} °Re",
-      "delisle": "${count} °D",
-      "romer": "${count} °Ro"
+      "celsius": "${pluralize(count, 'градус Цельсия', 'градуса Цельсия', 'градусов Цельсия')}",
+      "fahrenheit": "${pluralize(count, 'градус Фаренгейта', 'градуса Фаренгейта', 'градусов Фаренгейта')}",
+      "kelvin": "${pluralize(count, 'градус Кельвина', 'градуса Кельвина', 'градусов Кельвина')}",
+      "rankin": "${pluralize(count, 'градус Ранкина', 'градуса Ранкина', 'градусов Ранкина')}",
+      "deg_newton": "${pluralize(count, 'градус Ньютона', 'градуса Ньютона', 'градусов Ньютона')}",
+      "reaumur": "${pluralize(count, 'градус Реомюра', 'градуса Реомюра', 'градусов Реомюра')}",
+      "delisle": "${pluralize(count, 'градус Делиля', 'градуса Делиля', 'градусов Делиля')}",
+      "romer": "${pluralize(count, 'градус Рёмера', 'градуса Рёмера', 'градусов Рёмера')}"
     }
   }
 }
