@@ -96,8 +96,8 @@ class UnitsProcessor {
             });
         });
 
-        // console.log("DETECTED FROM VARIANTS:\n", _.map(_.uniq(fromVariants), v => v.id));
-        // console.log("DETECTED TO VARIANTS:\n", _.map(_.uniq(toVariants), v => v.id));
+        console.log("DETECTED FROM VARIANTS:\n", _.map(_.uniq(fromVariants), v => v.id));
+        console.log("DETECTED TO VARIANTS:\n", _.map(_.uniq(toVariants), v => v.id));
         return [_.uniq(fromVariants), _.uniq(toVariants)];
 
         function getQueryResults(query) {
@@ -121,9 +121,7 @@ class UnitsProcessor {
 
     process(ctx, num, units, toUnits, options) {
         options = options || {unitsRaw: true, silentFail: false};
-        const lng = (text, opts) => {
-            return ctx.i18n.t('__megaconverter.' + text, opts);
-        }
+        const lng = this._lngWrapper(ctx);
         let from, to;
         if (options.unitsRaw) {
             if (units.length > this._MAX_USER_UNPUT_LENGTH) return {final: [lng('unexpectedInput')]};
@@ -193,6 +191,7 @@ class UnitsProcessor {
             text = lng('clarify_to') + ` ${lng(`_${from[0].baseName}.${from[0].id}`, {count: num})}`;
             buttons = this._buildButtons(lng, num, from, to, 'to')
         }
+        // console.log(num, from, to);
         if (text && buttons) {
             return {clarify: [text, buttons]}
         } else {
@@ -320,7 +319,7 @@ class UnitsProcessor {
         num: 1,
         unitsBase: 2,
         from: 3,
-        to: 5,
+        to: 4,
     }
 
     _prepareCallbackString(data = {}) {
@@ -331,7 +330,7 @@ class UnitsProcessor {
                 dataArray[indexes[k]] = v;
             }
         });
-        // console.log(dataArray);
+        console.log(dataArray);
         return JSON.stringify(dataArray)
     }
 
@@ -349,6 +348,26 @@ class UnitsProcessor {
         return res;
     }
 
+    _lngWrapper = ctx => (text, opts) => {
+        let translation;
+        try {
+            translation = ctx.i18n.t('__megaconverter.' + text, opts);
+        } catch (e) {
+            // maybe we have here derived units (so build then up)
+            console.log('here');
+            if (!translation) {
+                let requested = text.split('.');
+                console.log(requested);
+                if (requested.length === 2) {
+                    let [baseNames, unitsKeys] = _.map(requested, piece => piece.split('__'));
+                    let first = ctx.i18n.t('__megaconverter.' + baseNames[0] + '.' + unitsKeys[0], opts);
+                    let second = ctx.i18n.t('__megaconverter.' + baseNames[1] + '.' + unitsKeys[1], {count: 1}).substr(2);
+                    translation = first + ' / ' + second;
+                }
+            }
+        }
+        return translation || 'UNDEFINED2';
+    }
 }
 
 // DATABASES
