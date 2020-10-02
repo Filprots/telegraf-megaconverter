@@ -255,11 +255,11 @@ class UnitsProcessor {
         let basedNum, finalNum;
         // turn from to base units
         if (from === baseUnit) basedNum = num;
-        else if (from.difference) basedNum = this._math.evaluate(from.r.replace(/x/i, num), {precision: 1});
+        else if (from.difference) basedNum = this._math.evaluate(from.r[0].replace(/x/i, num), {precision: 1});
         else basedNum = this._math.evaluate(`${num} / (${from.r}) * 1`, {precision: 1});
         // turn base units to to
         if (to === baseUnit) finalNum = basedNum;
-        else if (to.difference) finalNum = this._math.evaluate(to.r.replace(/x/i, basedNum), {precision: 1});
+        else if (to.difference) finalNum = this._math.evaluate(to.r[1].replace(/x/i, basedNum), {precision: 1});
         else finalNum = this._math.evaluate(`${basedNum} / 1 * (${to.r})`, {precision: 1});
         return finalNum;
     }
