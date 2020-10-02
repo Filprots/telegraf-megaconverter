@@ -45,23 +45,23 @@ const data = {
     },
     meter_water: {
         r: '10.2',
-        query: ['meter of water column','metre of water column','meters of water column','metres of water column','mh2o','m h2o','water meter','метров водяного столба','метр водяного столба','мводст','м вод ст']
+        query: ['meter of water column','metre of water column','meters of water column','metres of water column','mh2o','m h2o','water meter','метров водяного столба','метр водяного столба','мводст','мводст','мвст']
     },
     centimeter_water: {
         r: '1020',
-        query: ['centimeter of water column','centimetre of water column','centimeters of water column','centimetres of water column','cmwc','cmh2o','cm h2o','water centimeter','сантиметров водяного столба','сантиметр водяного столба','смводст','см вод ст']
+        query: ['centimeter of water column','centimetre of water column','centimeters of water column','centimetres of water column','cmwc','cmh2o','cm h2o','water centimeter','сантиметров водяного столба','сантиметр водяного столба','смводст','смводст']
     },
     millimeter_water: {
         r: '10200',
-        query: ['millimeter of water column','millimetre of water column','millimeters of water column','millimetres of water column','mmwc','mmh2o','mm h2o','water millimeter','миллиметров водяного столба','миллиметр водяного столба','ммводст','мм вод ст']
+        query: ['millimeter of water column','millimetre of water column','millimeters of water column','millimetres of water column','mmwc','mmh2o','mm h2o','water millimeter','миллиметров водяного столба','миллиметр водяного столба','ммводст','ммводст','ммвст']
     },
     feet_water: {
         r: '33.46',
-        query: ['feet of water column','feets of water column','fwc','fh2o','f h2o','water feet','water feets','фут водяного столба','футов водяного столба','фут водяного столба','фводст','ф вод ст']
+        query: ['feet of water column','feets of water column','fwc','fh2o','f h2o','water feet','water feets','фут водяного столба','футов водяного столба','фут водяного столба','фводст','фводст']
     },
     inch_water: {
         r: '401.5',
-        query: ['inch of water column','inches of water column','iwc','ih2o','i h2o','water inch','water inches','дюймов водяного столба','дюйм водяного столба','дводст','д вод ст']
+        query: ['inch of water column','inches of water column','iwc','ih2o','i h2o','water inch','water inches','дюймов водяного столба','дюйм водяного столба','дводст','дводст']
     },
 
 }
