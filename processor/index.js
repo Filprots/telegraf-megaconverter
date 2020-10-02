@@ -8,7 +8,9 @@ class UnitsProcessor {
         this._queryMaps = {};
         this._regexpMaps = {};
         this._bases = {};
-        this.callbackPrefix = 'cnvrtr';
+        this._basesKeysArray = [];
+        this._unitsKeysIndexesInBaseMap = {};
+        this.callbackPrefix = 'cnv';
         this.callbackVariantsDelimeter = '%';
         this._mathConfig = {
             number: 'BigNumber',
@@ -36,9 +38,11 @@ class UnitsProcessor {
     register(units) {
         _.each(units, (base, baseName) => {
             // add base
+            this._basesKeysArray.push(baseName);
             this._bases[baseName] = {
                 base,
-                baseUnit: _.find(base, u => String(u.r) === '1') // detect base unit
+                baseUnit: _.find(base, u => String(u.r) === '1'), // detect base unit,
+                unitsKeysArray: _.keys(base)
             };
             // inject map
             _.each(base, (u) => { // iterate units
@@ -50,6 +54,7 @@ class UnitsProcessor {
             _.each(base, (u, k) => {
                 u.baseName = baseName;
                 u.id = k;
+                this._unitsKeysIndexesInBaseMap[k] = this._bases[baseName].unitsKeysArray.indexOf(k);
             });
         });
         return this;
@@ -96,8 +101,8 @@ class UnitsProcessor {
             });
         });
 
-        console.log("DETECTED FROM VARIANTS:\n", _.map(_.uniq(fromVariants), v => v.id));
-        console.log("DETECTED TO VARIANTS:\n", _.map(_.uniq(toVariants), v => v.id));
+        // console.log("DETECTED FROM VARIANTS:\n", _.map(_.uniq(fromVariants), v => v.id));
+        // console.log("DETECTED TO VARIANTS:\n", _.map(_.uniq(toVariants), v => v.id));
         return [_.uniq(fromVariants), _.uniq(toVariants)];
 
         function getQueryResults(query) {
@@ -155,16 +160,17 @@ class UnitsProcessor {
         } else { // if many from variants
             if (!to.length) return this._buildClarifyRequest(lng, num, from, [], options); // if no TO variants at all (even without filtering)
             else { // if we have many from and many to (here we need to find out if we have matching from-to pairs)
-                const matchingTo = [];
+                let matchingTo = [];
                 // preserve only that TOes that mactch some of FROMs
                 _.each(from, fromUnit => {
                     matchingTo.push(..._.filter(to, toUnit => fromUnit.baseName === toUnit.baseName));
                 });
+                matchingTo = _.uniq(matchingTo);
                 // in case we have same TO baseNames, check if when we filter FROM and only variant stays
                 if (matchingTo.length && (matchingTo.length === 1 || _.every(matchingTo, tu => _.some(from, fu => tu.baseName === fu.baseName)))) {
                     const matchingFrom = this._filterSameUnitsType(_.map(matchingTo, mt => mt.baseName), from);
-                    // console.log("DETECTED MATCHNIG FROM VARIANTS:\n", _.map(matchingFrom, v => v.id));
-                    // console.log("DETECTED MATHING TO VARIANTS:\n", _.map(matchingTo, v => v.id));
+                    console.log("DETECTED MATCHNIG FROM VARIANTS:\n", _.map(matchingFrom, v => v.id));
+                    console.log("DETECTED MATCHING TO VARIANTS:\n", _.map(matchingTo, v => v.id));
                     if (matchingFrom.length === 1 && matchingTo.length === 1) return this._buildFinalResults(lng, num, matchingFrom, matchingTo, options);
                     else return this._buildClarifyRequest(lng, num, matchingFrom, matchingTo, options);
                 }
@@ -236,8 +242,8 @@ class UnitsProcessor {
 
     clarify(ctx, optionPicked) {
         let {num, unitsBase, from, to} = this._dispatchCallbackResult(optionPicked);
-        from = [this._bases[unitsBase].base[from]];
-        to = to ? _.compact(_.map(to.split(this.callbackVariantsDelimeter), t => this._bases[unitsBase].base[t])) : [];
+        from = [this._bases[unitsBase].base[this._bases[unitsBase].unitsKeysArray[from]]];
+        to = to ? _.compact(_.map(to.split(this.callbackVariantsDelimeter), t => this._bases[unitsBase].base[this._bases[unitsBase].unitsKeysArray[t]])) : [];
 
         return this.process(ctx, num, from, to, {unitsRaw: false});
     }
@@ -248,19 +254,21 @@ class UnitsProcessor {
         // SO WE USE mathjs
         if (from.r === to.r) return num;
         // console.log(this._math.evaluate(`${num} / (${from.r}) * (${to.r})`));
-        // return this._math.format(this._math.evaluate(`${num} / (${from.r}) * (${to.r})`, {precision: 1}));
+        // return this._math.format(this._math.evaluate(`${num} / (${from.r}) * (${to.r})`));
         // find base unit
         let {baseUnit} = this._bases[from.baseName];
         let basedNum, finalNum;
         // turn from to base units
         if (from === baseUnit) basedNum = num;
-        else if (from.difference) basedNum = this._math.evaluate(from.r[0].replace(/x/i, num), {precision: 1});
-        else basedNum = this._math.evaluate(`${num} / (${from.r}) * 1`, {precision: 1});
+        else if (from.difference) basedNum = this._math.evaluate(from.r[0].replace(/x/i, num));
+        else basedNum = this._math.evaluate(`${num} / (${from.r}) * 1`);
         // turn base units to to
         if (to === baseUnit) finalNum = basedNum;
-        else if (to.difference) finalNum = this._math.evaluate(to.r[1].replace(/x/i, basedNum), {precision: 1});
-        else finalNum = this._math.evaluate(`${basedNum} / 1 * (${to.r})`, {precision: 1});
-        return finalNum;
+        else if (to.difference) finalNum = this._math.evaluate(to.r[1].replace(/x/i, basedNum));
+        else finalNum = this._math.evaluate(`${basedNum} / 1 * (${to.r})`);
+        // return finalNum;
+        const decPl = finalNum.decimalPlaces();
+        return this._math.round(finalNum, decPl > 5 ? decPl - 1 : decPl);
     }
 
     _buildButtons(lng, num, from, to, iterate) {
@@ -275,7 +283,7 @@ class UnitsProcessor {
                         num: num,
                         unitsBase: varFrom.baseName,
                         from: varFrom.id,
-                        to: to && to.length ? _.pluck(to, 'id').join(this.callbackVariantsDelimeter) : undefined
+                        to: to && to.length ? _.pluck(_.reject(to, tu => tu.baseName !== varFrom.baseName), 'id') : undefined
                     }))); // BUTTON ACTION)
             });
         } else if (iterate === 'to') {
@@ -287,7 +295,7 @@ class UnitsProcessor {
                         num: num,
                         unitsBase: from[0].baseName,
                         from: from[0].id,
-                        to: varTo.id,
+                        to: [varTo.id],
                     }))); // BUTTON ACTION)
             });
         }
@@ -322,11 +330,31 @@ class UnitsProcessor {
         to: 4,
     }
 
+    _dataIndexGetters = {
+        unitsBase: (baseName) => {
+            return this._basesKeysArray.indexOf(baseName);
+        },
+        from: (fromUnitsKey) => {
+            return this._unitsKeysIndexesInBaseMap[fromUnitsKey];
+        },
+        to: (arrayOfToUnitsKeys) => {
+            if (!arrayOfToUnitsKeys || !arrayOfToUnitsKeys.length) return undefined;
+            return _.map(arrayOfToUnitsKeys, tou => this._unitsKeysIndexesInBaseMap[tou]).join(this.callbackVariantsDelimeter);
+        }
+    }
+
+    _dataNamesGetters = {
+        unitsBase: (baseIndex) => {
+            return this._basesKeysArray[baseIndex];
+        }
+    }
+
     _prepareCallbackString(data = {}) {
         const indexes = this._dataIndexes;
         const dataArray = [];
         _.each(data, (v, k) => {
             if (!isNaN(indexes[k])) {
+                if (this._dataIndexGetters[k]) v = this._dataIndexGetters[k](v);
                 dataArray[indexes[k]] = v;
             }
         });
@@ -343,7 +371,11 @@ class UnitsProcessor {
         }
         const res = {};
         _.each(this._dataIndexes, (index, key) => {
-            if (result[index]) res[key] = result[index];
+            if (result[index] || result[index] === 0) {
+                let val = result[index];
+                if (this._dataNamesGetters[key]) val = this._dataNamesGetters[key](val);
+                res[key] = val;
+            }
         });
         return res;
     }
@@ -354,10 +386,8 @@ class UnitsProcessor {
             translation = ctx.i18n.t('__megaconverter.' + text, opts);
         } catch (e) {
             // maybe we have here derived units (so build then up)
-            console.log('here');
             if (!translation) {
                 let requested = text.split('.');
-                console.log(requested);
                 if (requested.length === 2) {
                     let [baseNames, unitsKeys] = _.map(requested, piece => piece.split('__'));
                     let first = ctx.i18n.t('__megaconverter.' + baseNames[0] + '.' + unitsKeys[0], opts);

@@ -29,19 +29,25 @@ function mergeQueries(mQ, sQ, dels) {
                 queries.push(mainString + d + secString);
             });
         });
+        _.each(groupedSecondary['RegExp'], secR => {
+            queries.push(regexpMerge(mainString, secR, dels));
+        });
     });
     //merge regexps
     _.each(groupedMain['RegExp'], mainR => {
         _.each(groupedSecondary['RegExp'], secR => {
             queries.push(regexpMerge(mainR, secR, dels));
         });
+        _.each(groupedSecondary['String'], secString => {
+            queries.push(regexpMerge(mainR, secString, dels));
+        });
     });
     return queries;
 }
 
 function regexpMerge(one, two, dels) {
-    const first = trimmer(one.source);
-    const second = trimmer(two.source);
+    const first = trimmer(one.source || one);
+    const second = trimmer(two.source || two);
     return new RegExp(`^${first}\s*(${dels.join('|')})?\s*${second}$`, 'i');
 }
 
