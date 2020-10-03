@@ -7,6 +7,7 @@ const pressure = require('./pressure');
 const weight = require('./weight');
 const temprature = require('./temprature');
 const volume___time = require('./volume___time');
+const currency = require('./currency');
 
 module.exports = {
     time,
@@ -17,5 +18,6 @@ module.exports = {
     pressure,
     weight,
     temprature,
-    volume___time
+    volume___time,
+    currency
 }

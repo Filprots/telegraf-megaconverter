@@ -29,8 +29,10 @@ async function input(ctx, next) {
     const allUnitsString = ctx.match[4].trim();
     // const toUnits = ctx.match[4] && ctx.match[4].trim();
     // console.log(num, allUnitsString);
+    let chat_id = getChatId(ctx);
+    await ctx.telegram.sendChatAction(chat_id, 'typing');
     const t1 = Date.now();
-    const result = unitsProcessor.process(ctx, num, allUnitsString, null);
+    const result = await unitsProcessor.process(ctx, num, allUnitsString, null);
     const t2 = Date.now();
     console.log(`Request "${ctx.match[0]}" processed in ${t2 - t1} milliseconds`)
     await router(ctx, result);
@@ -40,8 +42,10 @@ async function input(ctx, next) {
 // LISTENER TO CALLBACKS FROM CLARIFYING QUERIES
 async function clarify(ctx, next) {
     // console.log('WE GOT THAT');
+    let chat_id = getChatId(ctx);
+    await ctx.telegram.sendChatAction(chat_id, 'typing');
     let chosen = ctx.update.callback_query.data;
-    const result = unitsProcessor.clarify(ctx, chosen);
+    const result = await unitsProcessor.clarify(ctx, chosen);
     await router(ctx, result);
     return next();
 }
@@ -49,16 +53,11 @@ async function clarify(ctx, next) {
 // ROUTER
 async function router(ctx, result) {
     const TIMEDELAY = 500;
-    let chat_id;
     if (!result || (!result.final && !result.clarify)) {
         console.error('No Final Result');
         return undefined;
     }
-    try {
-        chat_id = ctx.update.message ? ctx.update.message.chat.id : ctx.update.callback_query.from.id
-    } catch (e) {
-        console.log(e.message);
-    }
+    let chat_id = getChatId(ctx);
     if (chat_id) {
         ctx.telegram.sendChatAction(chat_id, 'typing').then(() => {
             if (result.notice) {
@@ -111,3 +110,13 @@ function noScenesEnteredTest(ctx) {
     return !ctx.session.__scenes.current;
 }
 
+function getChatId(ctx) {
+    let chat_id;
+    try {
+        chat_id = ctx.update.message ? ctx.update.message.chat.id : ctx.update.callback_query.from.id
+    } catch (e) {
+        console.log(e.message);
+        return undefined;
+    }
+    return chat_id;
+}
