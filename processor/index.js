@@ -2,6 +2,9 @@ const _ = require.main.require('underscore');
 const Extra = require.main.require('telegraf/extra');
 const Markup = require.main.require('telegraf/markup');
 const Math = require('mathjs');
+const fetch = require('node-fetch');
+const fx = require("money");
+const moment = require("moment");
 
 class UnitsProcessor {
     constructor() {
@@ -124,7 +127,7 @@ class UnitsProcessor {
         }
     }
 
-    process(ctx, num, units, toUnits, options) {
+    async process(ctx, num, units, toUnits, options) {
         options = options || {unitsRaw: true, silentFail: false};
         const lng = this._lngWrapper(ctx);
         let from, to;
@@ -138,25 +141,25 @@ class UnitsProcessor {
         // console.log('FROM-------------\n',from);
         // console.log('TO---------------\n',to);
 
-        return this._resolveConvertation(lng, num, from, to, options);
+        return await this._resolveConvertation(lng, num, from, to, options);
     }
 
-    _resolveConvertation(lng, num, from, to, options) {
+    async _resolveConvertation(lng, num, from, to, options) {
         if (isNaN(num)) { // if num was not given,
             num = 1
             options.silentFail = true;
         }
 
-        if (!from.length) return this._buildFinalResults(lng, num, [], [], options);
+        if (!from.length) return await this._buildFinalResults(lng, num, [], [], options);
 
         if (from.length === 1) { // if only one variant from
             if (to.length) { // if we have options to what
                 to = this._filterSameUnitsType(from[0].baseName, to); // filter only matching for given from
                 if (to.length) {
                     if (to.length > 1) return this._buildClarifyRequest(lng, num, from, to, options); // clarify which TO
-                    else return this._buildFinalResults(lng, num, from, to, options); // TO option is only one
-                } else return this._buildFinalResults(lng, num, from, [], options); // all TO options gone
-            } else return this._buildFinalResults(lng, num, from, [], options); // no TO options given
+                    else return await this._buildFinalResults(lng, num, from, to, options); // TO option is only one
+                } else return await this._buildFinalResults(lng, num, from, [], options); // all TO options gone
+            } else return await this._buildFinalResults(lng, num, from, [], options); // no TO options given
         } else { // if many from variants
             if (!to.length) return this._buildClarifyRequest(lng, num, from, [], options); // if no TO variants at all (even without filtering)
             else { // if we have many from and many to (here we need to find out if we have matching from-to pairs)
@@ -171,7 +174,7 @@ class UnitsProcessor {
                     const matchingFrom = this._filterSameUnitsType(_.map(matchingTo, mt => mt.baseName), from);
                     console.log("DETECTED MATCHNIG FROM VARIANTS:\n", _.map(matchingFrom, v => v.id));
                     console.log("DETECTED MATCHING TO VARIANTS:\n", _.map(matchingTo, v => v.id));
-                    if (matchingFrom.length === 1 && matchingTo.length === 1) return this._buildFinalResults(lng, num, matchingFrom, matchingTo, options);
+                    if (matchingFrom.length === 1 && matchingTo.length === 1) return await this._buildFinalResults(lng, num, matchingFrom, matchingTo, options);
                     else return this._buildClarifyRequest(lng, num, matchingFrom, matchingTo, options);
                 }
                 // else clarify FROM and TO
@@ -208,7 +211,7 @@ class UnitsProcessor {
 
     }
 
-    _buildFinalResults(lng, num, from, to, options) {
+    async _buildFinalResults(lng, num, from, to, options) {
         if (!from || !from.length) {
             if (!options.silentFail) {
                 return {final: [lng('noMatchFrom')]};
@@ -218,7 +221,18 @@ class UnitsProcessor {
         from = from[0];
         to = to ? to[0] : undefined;
         const bN = from.baseName;
-        //
+        // CURRENCY RATES CASE
+        if (from.isCurrency) {
+            if (!to || !to.isCurrency) return {
+                final: [lng('needToCurrency')]
+            }
+            const resNum = await this._convertCurrency(num, from, to);
+            moment.locale(lng('getLocale'));
+            console.log(lng('getLocale'))
+            const date = moment(this._currencyUpdatedTimestamp).format('LLL');
+            return {final: [`<b>${lng(`_${bN}.${from.id}`, {count: num})} = ${lng(`_${bN}.${to.id}`, {count: resNum})}</b>\n\n${lng('currencyTime')} ${date}\n(${lng('currencySponsor')})`]}
+        }
+        // OTHER UNITS
         if (to) {
             const resNum = this._convert(num, from, to);
             return {final: [`${lng(`_${bN}.${from.id}`, {count: num})} = ${lng(`_${bN}.${to.id}`, {count: resNum})}`]}
@@ -240,12 +254,12 @@ class UnitsProcessor {
         }
     }
 
-    clarify(ctx, optionPicked) {
+    async clarify(ctx, optionPicked) {
         let {num, unitsBase, from, to} = this._dispatchCallbackResult(optionPicked);
         from = [this._bases[unitsBase].base[this._bases[unitsBase].unitsKeysArray[from]]];
         to = to ? _.compact(_.map(to.split(this.callbackVariantsDelimeter), t => this._bases[unitsBase].base[this._bases[unitsBase].unitsKeysArray[t]])) : [];
 
-        return this.process(ctx, num, from, to, {unitsRaw: false});
+        return await this.process(ctx, num, from, to, {unitsRaw: false});
     }
 
     _convert(num, from, to) {
@@ -269,6 +283,46 @@ class UnitsProcessor {
         // return finalNum;
         const decPl = finalNum.decimalPlaces();
         return this._math.round(finalNum, decPl > 5 ? decPl - 1 : decPl);
+    }
+
+    async _convertCurrency(num, from, to) {
+        await this._updateCurrencyRates();
+        let FROM = from.r;
+        let TO = to.r;
+        return fx(num).from(FROM).to(TO);
+    }
+
+    _currencyUpdateTimeout = 60000;
+    _currencyUpdated = false;
+    _currencyUpdatedTimestamp = undefined;
+    _currencyRates = {
+        USD: 1
+    };
+    _currencyBase = 'USD';
+
+    async _updateCurrencyRates() {
+        if (!this._currencyUpdated) {
+            try {
+                const response = await fetch('https://openexchangerates.org/api/latest.json?app_id=3acb2227540244b7825f70ceb5fc8d5b');
+                const json = await response.json();
+                this._updateCurrenciesSettings(json);
+                // mark as updated and expire in given timeout
+                this._currencyUpdated = true;
+                setTimeout(() => {
+                    this._currencyUpdated = false
+                }, this._currencyUpdateTimeout);
+            } catch (e) {
+                console.log(e.message);
+            }
+        }
+    }
+
+    _updateCurrenciesSettings(data) {
+        fx.rates = data.rates;
+        fx.base = data.base;
+        this._currencyRates = data.rates;
+        this._currencyBase = data.base;
+        this._currencyUpdatedTimestamp = data.timestamp * 1000;
     }
 
     _buildButtons(lng, num, from, to, iterate) {
@@ -381,6 +435,9 @@ class UnitsProcessor {
     }
 
     _lngWrapper = ctx => (text, opts) => {
+        if (text === 'getLocale') {
+            return ctx.i18n.locale();
+        }
         let translation;
         try {
             translation = ctx.i18n.t('__megaconverter.' + text, opts);
