@@ -7,14 +7,15 @@ const unitsProcessor = require('./processor');
 // const regexp = /^(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)+(?:\s(?:-|in|to|into|в|сколько)?\s((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)$)?/i;
 const regexp = /^(?:\/)?\s?((-?[\d]*)[.,]?([\d]*))([\s\S]+)$/i;
 //////////////////////////////////////////////////////////////////////
-
+console.log("LOCALCLCLALALCALCLA")
 module.exports = {
     middleware: Telegraf.optional(noScenesEnteredTest, Telegraf.compose([
         Telegraf.hears(regexp, input),
         Telegraf.optional(callbackQueryTest, clarify)
     ])),
     locales: {
-        'ru': require('./locales/ru.json')
+        'ru': require('./locales/ru.json'),
+        'en': require('./locales/en.json')
     }
 };
 
