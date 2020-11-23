@@ -1,0 +1,6 @@
+to make local development-flow available, make this operations
+
+cd here
+npm link
+cd to main project (irris)
+npm link telegraf-megaconverter

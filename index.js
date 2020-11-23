@@ -2,7 +2,7 @@ const Telegraf = require.main.require('telegraf');
 const _ = require.main.require('underscore');
 
 const unitsProcessor = require('./processor');
-
+console.log("LOCA-TOCA")
 //////////////////////////////////////////////////////////////////////
 // const regexp = /^(?:([\d]+)[.,]?([\d]*))(?:\s)?((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)+(?:\s(?:-|in|to|into|в|сколько)?\s((?:[^\s\/]+)(?:(?:\/|\sв\s|\sper\s)(?:[^\s\/]+))?)$)?/i;
 const regexp = /^(?:\/)?\s?((-?[\d]*)[.,]?([\d]*))([\s\S]+)$/i;

@@ -228,7 +228,7 @@ class UnitsProcessor {
             }
             const resNum = await this._convertCurrency(num, from, to);
             moment.locale(lng('getLocale'));
-            console.log(lng('getLocale'))
+            // console.log(lng('getLocale'))
             const date = moment(this._currencyUpdatedTimestamp).format('LLL');
             return {final: [`<b>${lng(`_${bN}.${from.id}`, {count: num})} = ${lng(`_${bN}.${to.id}`, {count: resNum})}</b>\n\n${lng('currencyTime')} ${date}\n(${lng('currencySponsor')})`]}
         }
@@ -301,19 +301,28 @@ class UnitsProcessor {
     _currencyBase = 'USD';
 
     async _updateCurrencyRates() {
+        const oxrapis = [
+            'https://irrisketch.ru/oxr',
+            'https://irrisketch.com/oxr'
+        ];
         if (!this._currencyUpdated) {
-            try {
-                const response = await fetch('https://openexchangerates.org/api/latest.json?app_id=3acb2227540244b7825f70ceb5fc8d5b');
-                const json = await response.json();
-                this._updateCurrenciesSettings(json);
-                // mark as updated and expire in given timeout
-                this._currencyUpdated = true;
-                setTimeout(() => {
-                    this._currencyUpdated = false
-                }, this._currencyUpdateTimeout);
-            } catch (e) {
-                console.log(e.message);
+            for (const api_endpoint of oxrapis){
+                try {
+                    // console.log(`Trying to fetch OXR from api-endpoint ${api_endpoint}`);
+                    const response = await fetch(api_endpoint);
+                    const result = await response.json();
+                    this._updateCurrenciesSettings(result);
+                    // mark currencies as updated and expire in given timeout
+                    this._currencyUpdated = true;
+                    setTimeout(() => {
+                        this._currencyUpdated = false
+                    }, this._currencyUpdateTimeout);
+                    return;
+                } catch (e) {
+                    console.log(`Api endpoint ${api_endpoint} is unavailable`);
+                }
             }
+            console.log(`None of given endpoints are available`);
         }
     }
 
