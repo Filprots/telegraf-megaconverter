@@ -284,7 +284,26 @@
       "YER": "${count} YER",
       "ZAR": "${count} ZAR",
       "ZMW": "${count} ZMW",
-      "ZWL": "${count} ZWL"
+      "ZWL": "${count} ZWL",
+      "BTS": "${count} BTS",
+      "DASH": "${count} DASH",
+      "DOGE": "${count} DOGE",
+      "EAC": "${count} EAC",
+      "EMC": "${count} EMC",
+      "ETH": "${count} ETH",
+      "FCT": "${count} FCT",
+      "FTC": "${count} FTC",
+      "LD": "${count} LD",
+      "LTC": "${count} LTC",
+      "NMC": "${count} NMC",
+      "NVC": "${count} NVC",
+      "NXT": "${count} NXT",
+      "PPC": "${count} PPC",
+      "STR": "${count} STR",
+      "VTC": "${count} VTC",
+      "XMR": "${count} XMR",
+      "XPM": "${count} XPM",
+      "XRP": "${count} XRP"
     }
   }
 }
